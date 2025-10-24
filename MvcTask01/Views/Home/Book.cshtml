@@ -1,0 +1,46 @@
+﻿<h2>Book an Examination with Dr. @Model.Name</h2>
+
+@{
+    ViewData["Title"] = "Book an Examination";
+}
+
+@{
+    ViewData["Title"] = "Book an Examination";
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success" role="alert">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<form asp-action="SubmitBooking" method="post" class="container mt-5">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="patientName" class="form-label">Patient Name</label>
+            <input type="text" class="form-control" id="patientName" name="PatientName" required />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label for="patientAge" class="form-label">Age</label>
+            <input type="number" class="form-control" id="patientAge" name="Age" required />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label for="patientPhone" class="form-label">Phone Number</label>
+            <input type="text" class="form-control" id="patientPhone" name="Phone" required />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label for="appointmentDate" class="form-label">Preferred Appointment Date</label>
+            <input type="datetime-local" class="form-control" id="appointmentDate" name="AppointmentDate" required />
+        </div>
+    </div>
+
+    <input type="hidden" name="DoctorId" value="@Model.Id" />
+
+    <div class="text-center mt-4">
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </div>
+</form>
