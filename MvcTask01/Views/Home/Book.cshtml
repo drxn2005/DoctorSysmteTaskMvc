@@ -1,11 +1,16 @@
-﻿<h2>Book an Examination with Dr. @Model.Name</h2>
-
+﻿@model MvcTask01.Models.Booking
 @{
-    ViewData["Title"] = "Book an Examination";
+    ViewData["Title"] = "Book Appointment";
+    var doctor = ViewBag.Doctor as MvcTask01.Models.Doctor;
 }
 
-@{
-    ViewData["Title"] = "Book an Examination";
+<h2>Book an Examination with  @doctor?.Name</h2>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger" role="alert">
+        @TempData["Error"]
+    </div>
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -15,32 +20,178 @@
     </div>
 }
 
-<form asp-action="SubmitBooking" method="post" class="container mt-5">
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label for="patientName" class="form-label">Patient Name</label>
-            <input type="text" class="form-control" id="patientName" name="PatientName" required />
+<form asp-action="SubmitBooking" asp-controller="Booking" method="post" class="container mt-4">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Patient Name</label>
+            <input class="form-control" asp-for="PatientName" required />
+            <span asp-validation-for="PatientName" class="text-danger"></span>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Age</label>
+            <input type="number" class="form-control" asp-for="Age" required />
+            <span asp-validation-for="Age" class="text-danger"></span>
         </div>
 
-        <div class="col-md-6 mb-3">
-            <label for="patientAge" class="form-label">Age</label>
-            <input type="number" class="form-control" id="patientAge" name="Age" required />
+        <div class="col-md-6">
+            <label class="form-label">Phone Number</label>
+            <input class="form-control" asp-for="Phone" required />
+            <span asp-validation-for="Phone" class="text-danger"></span>
         </div>
 
-        <div class="col-md-6 mb-3">
-            <label for="patientPhone" class="form-label">Phone Number</label>
-            <input type="text" class="form-control" id="patientPhone" name="Phone" required />
+        <div class="col-md-6">
+            <label class="form-label">Preferred Appointment Date</label>
+            <input type="date" class="form-control" id="appointmentDate" asp-for="AppointmentDate" min="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+            <span asp-validation-for="AppointmentDate" class="text-danger"></span>
+            <div class="form-text text-danger d-none" id="dayError">Fridays and Saturdays are not available. Please select a valid date.</div>
         </div>
 
-        <div class="col-md-6 mb-3">
-            <label for="appointmentDate" class="form-label">Preferred Appointment Date</label>
-            <input type="datetime-local" class="form-control" id="appointmentDate" name="AppointmentDate" required />
+        <div class="col-12">
+            <label class="form-label">Select Time</label>
+            <select class="form-control" id="appointmentTime" name="appointmentTime" required>
+                <option value="">Select a time</option>
+            </select>
         </div>
     </div>
 
-    <input type="hidden" name="DoctorId" value="@Model.Id" />
+    <input type="hidden" asp-for="DoctorId" value="@doctor?.Id" />
 
     <div class="text-center mt-4">
-        <button type="submit" class="btn btn-primary">Submit</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Submit</button>
     </div>
 </form>
+
+@section Scripts {
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+
+    <script>
+        // Function to build available time slots
+        function buildTimes() {
+            const sel = document.getElementById('appointmentTime');
+            sel.innerHTML = '<option value="">Select a time</option>';
+            for (let m = 9 * 60; m < 17 * 60; m += 30) {
+                const h = Math.floor(m / 60), min = m % 60;
+                const h12 = ((h + 11) % 12) + 1, ampm = h < 12 ? 'AM' : 'PM';
+                const label = `${h12}:${min.toString().padStart(2, '0')} ${ampm}`;
+                sel.add(new Option(label, label));
+            }
+        }
+
+        // Helper function to check if the date is in the past
+        function isPastDate(dateStr) {
+            const today = new Date();
+            const selectedDate = new Date(dateStr + 'T00:00:00');
+            return selectedDate < today;
+        }
+
+        // Helper function to check if the date is a Friday or Saturday
+        function isFriOrSat(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            const dow = d.getUTCDay();
+            return dow === 5 || dow === 6;
+        }
+
+        // Helper function to check if the date is today
+        function isToday(dateStr) {
+            const today = new Date();
+            const selectedDate = new Date(dateStr + 'T00:00:00');
+            return selectedDate.toDateString() === today.toDateString();
+        }
+
+        // Function to disable past times for today
+        function disablePastTimes() {
+            const now = new Date();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+
+            const select = document.getElementById('appointmentTime');
+            const options = select.getElementsByTagName('option');
+
+            for (let option of options) {
+                const timeParts = option.value.split(' ');
+                const timeValue = timeParts[0].split(':');
+                let hours = parseInt(timeValue[0]);
+                const minutes = parseInt(timeValue[1]);
+                const period = timeParts[1];
+
+                if (period === 'PM' && hours !== 12) hours += 12;
+                if (period === 'AM' && hours === 12) hours = 0;
+
+                const optionTimeInMinutes = hours * 60 + minutes;
+
+                if (optionTimeInMinutes < currentTime) {
+                    option.disabled = true;
+                }
+            }
+        }
+
+        // Function to fetch booked times for the selected date
+        async function fetchBookedTimes(dateStr) {
+            const response = await fetch(`/Booking/GetBookedTimes?date=${dateStr}`);
+            const data = await response.json();
+            return data.bookedTimes;
+        }
+
+        // Function to filter out booked times from available times
+        function filterBookedTimes(bookedTimes) {
+            const select = document.getElementById('appointmentTime');
+            const options = select.getElementsByTagName('option');
+            for (let option of options) {
+                if (bookedTimes.includes(option.value)) {
+                    option.disabled = true;
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateEl = document.getElementById('appointmentDate');
+            const timeSel = document.getElementById('appointmentTime');
+            const err = document.getElementById('dayError');
+
+            buildTimes();
+            timeSel.disabled = true;
+
+            dateEl.addEventListener('change', async () => {
+                if (!dateEl.value) {
+                    timeSel.disabled = true;
+                    return;
+                }
+
+                buildTimes();
+                timeSel.disabled = false;
+
+                if (isFriOrSat(dateEl.value)) {
+                    showError("Fridays and Saturdays are not available. Please select a valid date.");
+                    timeSel.disabled = true;
+                    return;
+                }
+
+                if (isPastDate(dateEl.value)) {
+                    showError("Cannot select a date in the past. Please select a valid date.");
+                    timeSel.disabled = true;
+                    return;
+                }
+
+                hideError();
+
+                if (isToday(dateEl.value)) {
+                    disablePastTimes();
+                }
+
+                const bookedTimes = await fetchBookedTimes(dateEl.value);
+                filterBookedTimes(bookedTimes);
+            });
+
+            function showError(message) {
+                err.textContent = message;
+                err.classList.remove('d-none');
+                dateEl.value = '';
+                timeSel.disabled = true;
+            }
+
+            function hideError() {
+                err.classList.add('d-none');
+            }
+        });
+    </script>
+}

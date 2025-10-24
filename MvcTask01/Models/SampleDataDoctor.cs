@@ -1,4 +1,4 @@
-﻿namespace ContactDoctor.Models
+﻿namespace MvcTask01.Models
 {
     public class SampleDataDoctor
     {

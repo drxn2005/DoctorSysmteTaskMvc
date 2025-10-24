@@ -1,0 +1,31 @@
+﻿@{
+    ViewData["Title"] = "Booking Confirmation";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- الرسالة الأساسية -->
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success text-center" role="alert">
+                    <h2>@TempData["SuccessMessage"]</h2>
+                </div>
+            }
+
+            <!-- تفاصيل الحجز -->
+            <div class="card">
+                <div class="card-body text-center">
+                    <h4 class="card-title">✅ Your examination has been successfully booked!</h4>
+                    <p class="card-text">Thank you for booking your appointment with us. We will contact you shortly for confirmation.</p>
+                </div>
+            </div>
+
+            <!-- الأزرار -->
+            <div class="text-center mt-4">
+                <a href="@Url.Action("Index", "Home")" class="btn btn-primary">Back to Home</a>
+                <a href="@Url.Action("Index", "Home")" class="btn btn-outline-secondary">Book Another Appointment</a>
+            </div>
+        </div>
+    </div>
+</div>
